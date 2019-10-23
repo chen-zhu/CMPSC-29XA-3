@@ -9,5 +9,5 @@ RUN gem install bundler && \
     bundle config --global frozen 1 && \
     bundle install
 
-COPY app.rb config.ru thin.rb ./
-CMD exec bundle exec thin -p 3000:3000 start
+COPY app.rb config.ru puma.rb ./
+CMD exec bundle exec puma -C puma.rb
