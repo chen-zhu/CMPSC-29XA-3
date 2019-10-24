@@ -1,31 +1,109 @@
 require 'sinatra'
 require 'json'
 require 'digest'
+require 'securerandom'
+require 'pp'
+set :server, 'thin'
 
-# global_users: {username => Digest::SHA1.hexdigest password}
-$global_users = {')(*&^Dummy' => ')(*&^Dummy'}
-$server_history = {}
-$connections = [] #username ==> connection goes here.
+# pre-define some helpers.
+def created_time
+  Time.now.to_f
+end
 
-
-##################Defs####################
 def server_log(body)
-	require 'pp'
   	PP.pp body
 end
 
+$server_start = "data: " + {"status" => "Server start", "created" => created_time}.to_json + "\nevent: ServerStatus\nid: " + SecureRandom.hex(10) + "\n\n"
+$global_users = {'username' => 'token_goes_here'}
+$server_history = [$server_start]
+$connections = {} #username ==> connection goes here.
+
+##################Helpers####################
 def global_broadcast(data, event, id)
-	$connections.each do |out|
-        out << body
+	broadcast_body = "data: " + data + "\nevent: " + event + "\nid: " + id + "\n\n"
+
+	if($server_history.size >= 100)
+		dumb = $server_history.shift
+	end
+
+	$server_history << broadcast_body
+
+	$connections.each do |key, out|
+		#server_log(broadcast_body)
+        out << broadcast_body
     end
 end
 
-def lookup_user(token)
+def history_broadcast(stream_object)
+	$server_history.each do |history|
+		stream_object << history
+	end
+end
 
+#disconnect is only used for connections that are duplicated by a single user. 
+def Disconnect(user)
+	data_hash = {
+	#	"user" => user, 
+		"created" => created_time
+	}
+	
+	out = $connections[user]
+	out << "data: " + data_hash.to_json + "\nevent: Disconnect\nid: " + SecureRandom.hex(10) + "\n\n"
+	out.close
+	$connections.delete(user)
+end
+
+def Users(users_array)
+	data_hash = {
+		"users" => users_array, 
+		"created" => created_time
+	}
+	global_broadcast(data_hash.to_json, 'Users', SecureRandom.hex(10))
+end
+
+def Join(user, print_join)
+	if print_join
+		data_hash = {
+			"user" => user, 
+			"created" => created_time
+		}
+		global_broadcast(data_hash.to_json, 'Joins', SecureRandom.hex(10))
+	end 
+
+	#also broadcast users here!
+	Users($connections.keys)
+end
+
+def Message(message, user)
+	data_hash = {
+		"message" => message,
+		"user" => user, 
+		"created" => created_time
+	}
+	global_broadcast(data_hash.to_json, 'Message', SecureRandom.hex(10))
+end
+
+def Part(user)
+	data_hash = {
+		"user" => user, 
+		"created" => created_time
+	}
+	global_broadcast(data_hash.to_json, 'Part', SecureRandom.hex(10))
+
+	Users($connections.keys)
+end
+
+def ServerStatus(status)
+	data_hash = {
+		"status" => status, 
+		"created" => created_time
+	}
+	global_broadcast(data_hash.to_json, 'ServerStatus', SecureRandom.hex(10))
 end
 
 
-##################APIs####################
+##################API Endpoints####################
 # This endpoint is used to grant a user an access token
 post '/login' do
   	username = params['username']
@@ -50,12 +128,6 @@ post '/login' do
   	end
 
   	response = {"token" => signed_token}
-
-  	#TODO: Trigger broadcast JOIN.
-  	#TODO: Trigger Users 
-  	#TODO: disconnect user connection if exists.
-  	#TODO: Send server_history to the new user!
-
 
   	return Array[201, response.to_json] #use explicit return here!
 end
@@ -82,7 +154,7 @@ post '/message' do
 	end
 
 	#TODO: Trigger stream action to post message here!
-
+	Message(message, username)
 
 	return Array[201, "Created"]
 end
@@ -90,26 +162,39 @@ end
 
 get '/stream/:token', :provides => 'text/event-stream' do 
 	token = params['token']
-	content_type 'text/event-stream'
+	username = $global_users.key(token)
+	if(username.nil?)
+		return Array[403, "Invalid token."]
+	end
+
+	response.headers['Content-Type'] = 'text/event-stream'
+	response.headers['Connection'] = 'keep-alive'
 	stream(:keep_open) do |out|
-		$connections << out
-		out<<"connected.\n"
-		sleep(1);
-		out<<"connected.2\n"
-		sleep(2);
-		out<<"connected.3\n"
-	    # purge dead connections
-	    #connections.reject!(&:closed?)
-	    out.callback { puts "user disconnected" }
+		#Thanks to https://github.com/sinatra/sinatra/issues/448
+		EventMachine::PeriodicTimer.new(20) { out << "\0" }
+		print_join = true
+
+		#check if duplicate user connection here!
+		#disconnect the old connection if necessary!
+		if !$connections[username].nil?
+			print_join = false
+			Disconnect(username)
+		end 
+	
+		history_broadcast(out)
+
+		#then process this new connection.
+		$connections[username] = out
+		#server_log($connections.key(out))
+		Join(username, print_join)
+		#add call_back to detect Disconnection!
+		out.callback { 
+	    	closed_user = $connections.key(out)
+	    	if !closed_user.nil?
+		    	$connections.delete(closed_user)
+		    	Part(closed_user)
+		    end 
+	    }
 	end
 end
-
-
-
-
-
-
-
-
-
 
