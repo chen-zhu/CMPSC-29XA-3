@@ -169,7 +169,7 @@ post '/login' do
   	response.headers['Content-Type'] = 'application/json'
   	resp_token = {"token" => signed_token}
 
-  	return Array[201, resp_token.to_json + "\n"] #use explicit return here!
+  	return Array[201, resp_token.to_json + "\n"] 
 end
 
 # Send a message to all users of the chat system
@@ -194,7 +194,6 @@ post '/message' do
 		return Array[403, "Invalid token."]
 	end
 
-	#TODO: Trigger stream action to post message here!
 	Message(message, username)
 
 	return Array[201, "Created"]
@@ -212,27 +211,30 @@ get '/stream/:token', :provides => 'text/event-stream' do
 	response.headers['Content-Type'] = 'text/event-stream; charset=utf-8'
 	response.headers['Connection'] = 'keep-alive'
 	stream(:keep_open) do |out|
-		#Thanks to https://github.com/sinatra/sinatra/issues/448
+		# Thanks to https://github.com/sinatra/sinatra/issues/448
 		EventMachine::PeriodicTimer.new(20) { out << "\n" }
 		print_join = true
 
-		#check if duplicate user connection here!
-		#disconnect the old connection if necessary!
+		# Check if duplicate user connection here!
+		# Disconnect the old connection if necessary!
 		if !$connections[username].nil?
 			print_join = false
 			Disconnect(username)
 		end 
 	
 		history_broadcast(out, request.env['HTTP_LAST_EVENT_ID'])
-		if(request.env['HTTP_LAST_EVENT_ID']) #if last_event_id presents, then its an reconnection!
+
+		# If last_event_id presents, then its an reconnection!
+		# Do not print here then!
+		if(request.env['HTTP_LAST_EVENT_ID']) 
 			print_join = false
 		end
 
-		#then process this new connection.
+		# Then process this new connection.
 		$connections[username] = out
-		#server_log($connections.key(out))
 		Join(username, print_join)
-		#add call_back to detect Disconnection!
+
+		# Add call_back to detect Disconnection!
 		out.callback { 
 	    	closed_user = $connections.key(out)
 	    	if !closed_user.nil?
