@@ -36,7 +36,7 @@ Sample HTTP Response
 HTTP/1.1 201 CREATED
 ```
 
-### GET /stream/<SIGNED TOKEN>
+### GET /stream/\<SIGNED TOKEN\>
 Establish stream connection with frontend
 
 Sample CURL
