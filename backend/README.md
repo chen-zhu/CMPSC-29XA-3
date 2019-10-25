@@ -62,6 +62,56 @@ event: Message
 id: 1a72e044-92e4-4ee5-94fe-5cabacb75b83
 ```
 
+## SSE Events Details
+
+### Disconnect
+Indicates that the server is closing the connection. The browser must not auto-retry on disconnect.
+
+Fields:
+
+- `created` (float): the unix timestamp when the event was created
+
+### Join
+Indicates that a user has joined the chat.
+
+Fields:
+
+- `created` (float): the unix timestamp when the event was created
+- `user` (string): the username of the user who joined the chat
+
+### Message
+Represents a message from a user connected to the chat.
+
+Fields:
+
+- `created` (float): the unix timestamp when the event was created
+- `message` (string): the message from the user
+- `user` (string): the username of the sender
+
+### Part
+Indicates that a user has left the chat.
+
+Fields:
+
+- `created` (float): the unix timestamp when the event was created
+- `user` (string): the username of the user who left the chat
+
+### ServerStatus
+Used for the server to provide status updates.
+
+Fields:
+
+- `created` (float): the unix timestamp when the event was created
+- `status` (string): the message from the server
+
+### Users
+Provides a complete list of users connected to the chat server. This message is always sent out on connection of new streams.
+
+Fields:
+
+- `created` (float): the unix timestamp when the event was created
+- `users` (array[string]): the list of connected users
+
 ## Local Deployment
 
 ### Install Docker
