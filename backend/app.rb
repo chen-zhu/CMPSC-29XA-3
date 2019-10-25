@@ -5,7 +5,7 @@ require 'securerandom'
 require 'pp'
 set :server, 'thin'
 
-# pre-define some helpers.
+# pre-define some important helpers.
 def created_time
   Time.now.to_f
 end
@@ -14,31 +14,60 @@ def server_log(body)
   	PP.pp body
 end
 
-$server_start = "data: " + {"status" => "Server start", "created" => created_time}.to_json + "\nevent: ServerStatus\nid: " + SecureRandom.hex(10) + "\n\n"
-$global_users = {'username' => 'token_goes_here'}
-$server_history = [$server_start]
+$global_users = {'username' => '249ba36000029bbe97499c03db5a9001f6b734ec'} #for debugging purpose!
 $connections = {} #username ==> connection goes here.
+
+$server_event_id = SecureRandom.hex(10)
+$server_history = {
+	$server_event_id => {
+		"data" => {"status" => "Server Starts", "created" => created_time}.to_json, 
+		"event" => "ServerStatus", 
+		"id" => $server_event_id,
+	},
+}
 
 ##################Helpers####################
 def global_broadcast(data, event, id)
-	broadcast_body = "data: " + data + "\nevent: " + event + "\nid: " + id + "\n\n"
-
 	if($server_history.size >= 100)
 		dumb = $server_history.shift
 	end
 
-	$server_history << broadcast_body
+	$server_history[id] = {
+		"data" => data, 
+		"event" => event, 
+		"id" => id
+	}
 
 	$connections.each do |key, out|
 		#server_log(broadcast_body)
-        out << broadcast_body
+        out << "data: " + data + "\nevent: " + event + "\nid: " + id + "\n\n\n"
     end
 end
 
-def history_broadcast(stream_object)
-	$server_history.each do |history|
-		stream_object << history
-	end
+#TODO: find a better way to handle this function!
+def history_broadcast(stream_object, last_event_id = nil)
+	#server_log "LastEventID: [" + last_event_id.to_s + "]\n"
+	if(last_event_id && $server_history.key?(last_event_id))
+		#server_log "Last Event ID is found in history. perform search.\n"
+		skip = true
+		$server_history.each do |key, history|
+			if(!skip && ["ServerStatus", "Message"].include?(history['event'])) 
+				stream_object << "data: " + history['data'] + "\nevent: " + history['event'] + "\nid: " + history['id'] + "\n\n\n"
+			end	
+
+			#if found match event id, then we can print out all content after this!
+			if(key == last_event_id)
+				skip = false
+			end 
+		end
+	else 
+		$server_history.each do |key, history|
+			#Broadcast ServerStatus & Message only! 
+			if(["ServerStatus", "Message"].include?(history['event'])) 
+				stream_object << "data: " + history['data'] + "\nevent: " + history['event'] + "\nid: " + history['id'] + "\n\n\n"
+			end		
+		end
+	end 
 end
 
 #disconnect is only used for connections that are duplicated by a single user. 
@@ -47,7 +76,6 @@ def Disconnect(user)
 	#	"user" => user, 
 		"created" => created_time
 	}
-	
 	out = $connections[user]
 	out << "data: " + data_hash.to_json + "\nevent: Disconnect\nid: " + SecureRandom.hex(10) + "\n\n"
 	out.close
@@ -68,7 +96,7 @@ def Join(user, print_join)
 			"user" => user, 
 			"created" => created_time
 		}
-		global_broadcast(data_hash.to_json, 'Joins', SecureRandom.hex(10))
+		global_broadcast(data_hash.to_json, 'Join', SecureRandom.hex(10))
 	end 
 
 	#also broadcast users here!
@@ -104,13 +132,24 @@ end
 
 
 ##################API Endpoints####################
+before do
+  if request.request_method == 'OPTIONS'
+  	response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST"
+    response.headers["Access-Control-Allow-Headers"] = "Authorization"
+    halt 204
+  end
+end
+
 # This endpoint is used to grant a user an access token
 post '/login' do
   	username = params['username']
   	password = params['password']
+
+  	response['Access-Control-Allow-Origin'] = '*'
   	
   	#check if username or password is given.
-  	if(username.nil? || password.nil? )
+  	if(username.to_s.length == 0 || password.to_s.length == 0)
   		return Array[422, "Username or Password is blank!"]
   	end
 
@@ -123,19 +162,21 @@ post '/login' do
   	else 
   		#user exist, then validate username and password here!
   		if($global_users[username] != signed_token)
-  			return Array[403, "username or password does not macth!"]
+  			return Array[403, "username or password does not macth!\n"]
   		end
   	end
 
-  	response = {"token" => signed_token}
+  	response.headers['Content-Type'] = 'application/json'
+  	resp_token = {"token" => signed_token}
 
-  	return Array[201, response.to_json] #use explicit return here!
+  	return Array[201, resp_token.to_json + "\n"] #use explicit return here!
 end
 
 # Send a message to all users of the chat system
 post '/message' do
-	message = params['message']
-	if(message.nil?)
+	response['Access-Control-Allow-Origin'] = '*'
+	message = params['message'].strip
+	if(message.length == 0)
 		return Array[422, "No message provided."]
 	end
 
@@ -161,17 +202,18 @@ end
 
 
 get '/stream/:token', :provides => 'text/event-stream' do 
+	response['Access-Control-Allow-Origin'] = '*'
 	token = params['token']
 	username = $global_users.key(token)
 	if(username.nil?)
 		return Array[403, "Invalid token."]
 	end
 
-	response.headers['Content-Type'] = 'text/event-stream'
+	response.headers['Content-Type'] = 'text/event-stream; charset=utf-8'
 	response.headers['Connection'] = 'keep-alive'
 	stream(:keep_open) do |out|
 		#Thanks to https://github.com/sinatra/sinatra/issues/448
-		EventMachine::PeriodicTimer.new(20) { out << "\0" }
+		EventMachine::PeriodicTimer.new(20) { out << "\n" }
 		print_join = true
 
 		#check if duplicate user connection here!
@@ -181,7 +223,10 @@ get '/stream/:token', :provides => 'text/event-stream' do
 			Disconnect(username)
 		end 
 	
-		history_broadcast(out)
+		history_broadcast(out, request.env['HTTP_LAST_EVENT_ID'])
+		if(request.env['HTTP_LAST_EVENT_ID']) #if last_event_id presents, then its an reconnection!
+			print_join = false
+		end
 
 		#then process this new connection.
 		$connections[username] = out

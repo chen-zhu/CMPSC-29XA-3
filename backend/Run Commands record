@@ -1,0 +1,13 @@
+[Docker Build Command]: 
+docker build -t us.gcr.io/cs291-f19/project3_${CS291_ACCOUNT} . 
+
+
+[Docker Local Run Command]: 
+docker run -it --rm   -p 8080:3000   -v ~/.config/gcloud/application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json   us.gcr.io/cs291-f19/project3_${CS291_ACCOUNT}
+
+[Push Docker Image]: 
+docker push us.gcr.io/cs291-f19/project3_${CS291_ACCOUNT}
+
+[Deploy CContainer]: 
+gcloud beta run deploy   --allow-unauthenticated   --concurrency 80   --image us.gcr.io/cs291-f19/project3_${CS291_ACCOUNT}   --memory 512Mi   --platform managed   --project cs291-f19   --region us-central1   --service-account project2@cs291-f19.iam.gserviceaccount.com   --set-env-vars RACK_ENV=production   ${CS291_ACCOUNT}
+
