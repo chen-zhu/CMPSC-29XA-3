@@ -15,7 +15,7 @@ class ChatWindow extends React.Component {
   scrollToBottom = () => {
     console.log('scrollToBottom')
      setTimeout(() => {
-       this.messagesEnd.scrollIntoView({ behavior: "auto" })
+       this.messagesEnd && this.messagesEnd.scrollIntoView({ behavior: "auto" })
      }, 0)
   }
   onDataUpdate = data => {
@@ -48,20 +48,34 @@ class ChatWindow extends React.Component {
   render() {
     function Item(props) {
       let item = props.item
-      if (item.type == 'status') {
-        return (
-          <li className="status-item">
-              <p className="time">{item.time} </p>
-              <p className="message">{item.status}</p>
-          </li>
-         )
-      } else {
-        return (
-          <li className="item">
-            <p className="time">{item.time} {item.user}:</p>
-            <p className="message">{item.msg}</p>
-          </li>
-        )
+      switch (item.type) {
+        case 'status':
+          return (
+            <li className="status-item">
+                <p className="time">{item.time} [STATUS]: {item.status}</p>
+            </li>
+           )
+        case 'join':
+          return (
+            <li className="status-item">
+                <p className="time">{item.time} [JOIN]: {item.user}</p>
+            </li>
+           )
+        case 'part':
+          return (
+            <li className="status-item">
+                <p className="time">{item.time} [PART]: {item.user}</p>
+            </li>
+           )
+        case 'msg':
+          return (
+            <li className="item">
+              <p className="time">{item.time} {item.user}:</p>
+              <p className="message">{item.msg}</p>
+            </li>
+          )
+        default:
+          return <li />
       }
     }
 
