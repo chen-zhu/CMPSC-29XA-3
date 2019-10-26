@@ -69,6 +69,11 @@ class ChatService {
 	}
 	addUser(data) {
 		this.userList.push(data.user)
+		this.messageList.push({
+			type: 'join',
+			time: this.date_format(data.created),
+			user: data.user
+		})
 	}
 	deleteUser(data) {
 		let user = data.user
@@ -79,6 +84,11 @@ class ChatService {
 		        break;
 		    }
 		}
+		this.messageList.push({
+			type: 'part',
+			time: this.date_format(data.created),
+			user: data.user
+		})
     }
     date_format(timestamp) {
 	    var date = new Date(timestamp * 1000);
