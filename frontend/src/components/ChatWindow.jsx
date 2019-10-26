@@ -15,7 +15,7 @@ class ChatWindow extends React.Component {
   scrollToBottom = () => {
     console.log('scrollToBottom')
      setTimeout(() => {
-       this.messagesEnd.scrollIntoView({ behavior: "auto" })
+       this.messageEnd && this.messagesEnd.scrollIntoView({ behavior: "auto" })
      }, 0)
   }
   onDataUpdate = data => {
