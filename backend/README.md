@@ -112,6 +112,28 @@ Fields:
 - `created` (float): the unix timestamp when the event was created
 - `users` (array[string]): the list of connected users
 
+## SSE Server Features
+- Server must maintains state about the users who are connected.
+
+- A broadcast JOIN will be made any time a new user is connected.
+
+- A broadcast PART will be made any time a user has disconnected.
+
+- A Users event will be sent to each newly established connection.
+
+- Incoming messages will be broadcast to everyone.
+
+- A Disconnect will be sent to the existing connection when a user attempts to connect with a second client (the second client will remain connected).
+
+-- No JOIN or PART message will occur in such a case because the user is still connected.
+The first event in the server will be ServerStatus indicating the server has started.
+
+- A history of at least the last 100 events will be kept.
+
+- All of the Message or ServerStatus in the history will be sent to a newly connecting user.
+
+- A user who is reestablishing its connection (retry after failure) will receive all of the messages in the history that have occurred since the provided last_event_id.
+
 ## Local Deployment
 
 ### Install Docker
