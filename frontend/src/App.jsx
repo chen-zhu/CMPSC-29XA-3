@@ -1,32 +1,36 @@
 import React from 'react';
-import './css/App.css';
+import './css/App.scss';
 import Login from './components/Login'
+import ChatWindow from './components/ChatWindow'
 
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { counter: 0, showCalculator: false };
+    this.state = { isLoggedIn: false };
   }
 
-  toggleCalculators = () => {
-    this.setState((prevState, props) => ({
-      showCalculator: !prevState.showCalculator
-    }));
-  };
-
-  updateCounter = () => {
-    console.log("Update");
-    this.setState((prevState, props) => ({
-      counter: prevState.counter + 1
-    }));
-  };
+  loginCallback = isSuccess => {
+    isSuccess && this.setState({isLoggedIn: true})
+  }
+  onDisconnect = () => {
+    this.setState({isLoggedIn: false})
+  }
 
   render() {
+    console.log('[App] render')
+    let content;
+    if (this.state.isLoggedIn) {
+      content = <ChatWindow onDisconnect={this.onDisconnect}/>
+    } else {
+      content = <Login afterLogin={this.loginCallback}/>
+    }
     return (
-      <div className="App">
-        <div className="title">CS291A</div>
-        <Login/>
-      </div>
+        <div className="App">
+          <div className={this.state.isLoggedIn ? "content" : "content snow"}>
+           {content}
+          </div>
+          <div className="logo">@CS291A</div>
+        </div>
     );
   }
 }
