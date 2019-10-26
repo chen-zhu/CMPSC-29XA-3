@@ -127,7 +127,10 @@ class ChatService {
 		this._bindListener(source, 'Join', this.addUser.bind(this))
 		this._bindListener(source, 'Part', this.deleteUser.bind(this))
 		this._bindListener(source, 'ServerStatus', this.addServerStatus.bind(this))
-		this._bindListener(source, 'Disconnect', onDisconnect)
+		this._bindListener(source, 'Disconnect', () => {
+			source.close()
+			onDisconnect()
+		})
 		this._bindListener(source, 'Message', this.addMessage.bind(this))
 
 		source.addEventListener(
