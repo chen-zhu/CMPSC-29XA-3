@@ -17,6 +17,7 @@ html, body, #root {
   }
   .content {
     flex: 1;
+    height: 100%;
     width: 100%;
     background-color: #fff;
     .chat-window {
@@ -27,19 +28,17 @@ html, body, #root {
         width: 70%;
         height: 100%;
         padding-right: 20px;
-        overflow: hidden;
+        overflow: scroll;
         display: flex;
         flex-direction: column;
         .top {
-          flex: 1;
-          overflow: hidden;
-          height: 0;
+          flex: 2;
+          height: 100%;
+          overflow: scroll;
           padding: 10px 0;
           .message-list {
             padding: 0;
             margin: 0;
-            height: 100%;
-            overflow: scroll;
             display: flex;
             flex-direction: column;
             
@@ -47,7 +46,7 @@ html, body, #root {
               border-top: 1px gray solid;
             }
             .status-item {
-              display: flex;
+              flex: 1;
               color: gray;
             }
             .item {
