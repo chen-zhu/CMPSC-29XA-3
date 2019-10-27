@@ -1,6 +1,9 @@
-# CMPSC-291A-Project 3: Chat Server and Corresponding React Front-End
+# CMPSC-291A-Project 3: 
+# Chat Server and Corresponding React Front-End
 
 Thanks to [Dr. Bryce Boe](https://sites.cs.ucsb.edu/~bboe/) for his amazing project idea! 
+
+More details/READMEs can be found under `/frontend` or `/backend` directory.
 
 ## Project Learning Outcomes
 - Student has written and deployed a React application coded using JSX.
@@ -24,4 +27,3 @@ Thanks to [Dr. Bryce Boe](https://sites.cs.ucsb.edu/~bboe/) for his amazing proj
 
 - [Sinatra](http://sinatrarb.com/)
 
-More details/READMEs can be found under `/frontend` or `/backend` directory.
