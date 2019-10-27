@@ -1,5 +1,4 @@
-# CMPSC-291A-Project 3: 
-# Chat Server and Corresponding React Front-End
+# CMPSC-291A-Project 3: Chat Server and React Front-End
 
 Thanks to [Dr. Bryce Boe](https://sites.cs.ucsb.edu/~bboe/) for his amazing project idea! 
 
