@@ -14,6 +14,7 @@ class ChatService {
 	}
 	
 	login(url, username, password) {
+		this.clearToken()
 		this.url = url
 		
 		return new Promise((resolve, reject) => {
@@ -68,6 +69,9 @@ class ChatService {
 		this.userList = [...users]
 	}
 	addUser(data) {
+		if (this.userList.findIndex( el => el == data.user) >= 0) {
+			return;
+		}
 		this.userList.push(data.user)
 		this.messageList.push({
 			type: 'join',
